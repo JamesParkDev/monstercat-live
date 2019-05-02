@@ -20,37 +20,39 @@ module.exports = class Client extends EventEmitter {
   constructor(options) {
     super();
     if (!options.token) return new Error("INVALID_TOKEN: No token was provide");
+    if (!options.attempts) options.attempts = 10;
     this.ws = new WebSocket(util.WEBSOCKET, options.token);
 
     this.ws.onopen = target => {
       setInterval(() => {
-        this.ws.send(this._stringToArrayBuffer(JSON.stringify({e: "PONG"})));
-      }, 2000);
+        this.ws.pong();
+        this.ws.send(this._stringToArrayBuffer(JSON.stringify({ e: "PONG" })));
+      }, 4000);
     };
 
-    
-    this.ws.onmessage = async message => {
-        var enc = new TextDecoder("utf-8");
-        var arr = new Uint8Array(message.data);
-        var e = await enc.decode(arr);
-        const parsed = JSON.parse(e);
-        if (parsed.e === "TRACK_UPDATE") {
-          this.song = e.data;
-          this.emit("TRACK_UPDATE", parsed.data);
-        } else if (parsed.e === "DISCONNECTED") {
-          if (parsed.data.reason === "INVALID_TOKEN") { 
-            throw new Error("INVALID_TOKEN: false token was provided");
-          }
-        } else if (parsed.e === "READY") {
-            this.emit("CONNECTED");
-        }
-      };
+    this.options = options;
 
-  
-      this.ws.onclose = (clean, code, reason, target) => {
-          throw new Error(`DISCONNECTED: reason: ${reason}`);
-      };
- 
+    this.ws.onmessage = async message => {
+      var enc = new TextDecoder("utf-8");
+      var arr = new Uint8Array(message.data);
+      var e = await enc.decode(arr);
+      const parsed = JSON.parse(e);
+      if (parsed.e === "TRACK_UPDATE") {
+        this.song = e.data;
+        this.emit("TRACK_UPDATE", parsed.data);
+      } else if (parsed.e === "DISCONNECTED") {
+        if (parsed.data.reason === "INVALID_TOKEN") {
+          throw new Error("INVALID_TOKEN: false token was provided");
+        }
+      } else if (parsed.e === "READY") {
+        this.emit("CONNECTED");
+      }
+    };
+
+    this.ws.onclose = (clean, code, reason, target) => {
+      // try connect
+      this._reconnect();
+    };
 
     this.isAlive = false;
 
@@ -58,6 +60,21 @@ module.exports = class Client extends EventEmitter {
      * @type {song|null}
      */
     this.song = null;
+  }
+
+  open(attempts) {
+    this.ws = new WebSocket(util.WEBSOCKET, this.options.token);
+    if (attempts >= this.options.attemnts) {
+       return;
+    }
+  }
+
+  _reconnect() {
+    var self = this;
+    setTimeout(function() {
+      self.options.attempts++;
+      self.open(true);
+    }, 3000);
   }
 
   _stringToArrayBuffer(string) {

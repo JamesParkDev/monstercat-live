@@ -1,6 +1,6 @@
 const Client = require('../src/Client/MonsterCat');
 
-var client = new Client({token: "TOKEN_HERE"});
+var client = new Client({token: "TOKEN"});
 
 
 client.on("CONNECTED", () => {
