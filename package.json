@@ -1,0 +1,12 @@
+{
+  "name": "monstercat-live",
+  "version": "1.0.0",
+  "description": "Simple wrapper to fetch new track updates once they get updated in irc chat Created to replace mctl.io since it's down.",
+  "main": "index.js",
+  "author": "James",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "ws": "^7.0.0"
+  }
+}
